@@ -1,0 +1,104 @@
+services:
+
+  archivist-es:
+    container_name: archivist-es
+    environment:
+      - ELASTIC_PASSWORD=
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=true
+      - discovery.type=single-node
+      - path.repo=/usr/share/elasticsearch/data/snapshot
+    image: bbilly1/tubearchivist-es:latest
+    network_mode: service:gluetun
+    restart: unless-stopped
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+    volumes:
+      - es:/usr/share/elasticsearch/data
+
+  archivist-redis:
+    container_name: archivist-redis
+    depends_on:
+      - archivist-es
+    image: redis:latest
+    network_mode: service:gluetun
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+
+  gluetun:
+    cap_add:
+      - NET_ADMIN
+    container_name: gluetun
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=
+      - VPN_TYPE=
+      - WIREGUARD_PRIVATE_KEY=
+      - WIREGUARD_ADDRESSES=
+      - SERVER_CITIES=New York NY
+      - TZ=America/New_York
+      - UPDATER_PERIOD=24h
+    hostname: gluetun
+    image: qmcgaw/gluetun:latest
+    ports:
+      - 8888:8888/tcp
+      - 8388:8388/tcp
+      - 8388:8388/udp
+      - '7000:7000'
+    restart: unless-stopped
+    volumes:
+      - gluetun:/gluetun
+
+  tubearchivist:
+    container_name: tubearchivist
+    depends_on:
+      - archivist-es
+      - archivist-redis
+    environment:
+      - ES_URL=http://localhost:9200
+      - REDIS_CON=redis://localhost
+      - HOST_UID=3004
+      - HOST_GID=3004
+      - TA_HOST=https://ta..xyz
+      - TA_USERNAME=admin
+      - TA_PASSWORD=
+      - ELASTIC_PASSWORD=
+      - TZ=America/New_York
+      - TA_AUTO_UPDATE_YTDLP=nightly
+      - TA_PORT=7000
+      - TA_BACKEND_PORT=8090
+    healthcheck:
+      interval: 2m
+      retries: 3
+      start_period: 30s
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - http://localhost:7000/api/health
+      timeout: 10s
+    image: bbilly1/tubearchivist:latest
+    network_mode: service:gluetun
+    restart: unless-stopped
+    volumes:
+      - /mnt/main/tube-archivist/media:/youtube
+      - /mnt/main/tube-archivist/cache:/cache
+
+  watchtower:
+    command: '--interval 300'
+    container_name: watchtower
+    image: containrrr/watchtower:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+volumes:
+  cache: Null
+  es: Null
+  gluetun: Null
+  redis: Null
+

@@ -1,0 +1,24 @@
+services:
+
+  cloudflare-ddns:
+    image: favonia/cloudflare-ddns:latest
+    restart: unless-stopped
+    container_name: cloudflare-ddns
+    network_mode: host
+    user: "1000:1000" # Run the updater with specific user and group IDs (in that order).
+    read_only: true # Make the container filesystem read-only (optional but recommended)
+    cap_drop: [all] # Drop all Linux capabilities (optional but recommended)
+    security_opt: [no-new-privileges:true]
+    # Another protection to restrict superuser privileges (optional but recommended)
+    environment:
+      - CLOUDFLARE_API_TOKEN= # Your Cloudflare API token
+      - DOMAINS= #list of domains here
+      - PROXIED=true # Tell Cloudflare to cache webpages and hide your IP (optional)
+      - IP6_PROVIDER=none
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped

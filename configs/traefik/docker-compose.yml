@@ -1,0 +1,62 @@
+secrets:
+  cf-token:
+    file: ./cf-token
+
+services:
+
+  traefik:
+    image: traefik:latest  
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true 
+    secrets:
+      - cf-token 
+    env_file:
+      - .env 
+    networks:
+       - proxy
+    ports:
+      - 80:80
+      - 81:81
+      - 443:443
+      - 444:444
+    environment:
+      - TRAEFIK_DASHBOARD_CREDENTIALS=${TRAEFIK_DASHBOARD_CREDENTIALS}
+      # - CF_API_EMAIL=your@email.com # Cloudflare email
+      # - CF_DNS_API_TOKEN=YOUR-TOKEN # Cloudflare API Token
+      - CF_DNS_API_TOKEN_FILE=/run/secrets/cf-token # see https://doc.traefik.io/traefik/https/acme/#providers
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /home/main/traefik/traefik.yaml:/traefik.yaml:ro
+      - /home/main/traefik/acme.json:/acme.json
+      - /home/main/traefik/config.yaml:/config.yaml:ro
+      - /home/main/traefik/logs:/var/log/traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.entrypoints=http"
+      - "traefik.http.routers.traefik.rule=Host(`traefik..xyz`)"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_DASHBOARD_CREDENTIALS}"
+      - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.routers.traefik.middlewares=traefik-https-redirect"
+      - "traefik.http.routers.traefik-secure.entrypoints=https"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik..xyz`)"
+      - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      - "traefik.http.routers.traefik-secure.tls.certresolver=cloudflare"
+      - "traefik.http.routers.traefik-secure.tls.domains[0].main=xyz"
+      - "traefik.http.routers.traefik-secure.tls.domains[0].sans=*.xyz"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+
+networks:
+  proxy:
+    external: true

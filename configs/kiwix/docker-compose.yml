@@ -1,0 +1,19 @@
+services:
+
+  kiwix:
+      container_name: kiwix
+      image: ghcr.io/kiwix/kiwix-serve:latest
+      ports:
+        - "8080:8080"
+      volumes:
+        - /mnt/kiwix/zims/:/data
+      command:
+        - '*.zim'
+      restart: unless-stopped
+
+  watchtower:
+      image: containrrr/watchtower:latest
+      container_name: watchtower
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+      restart: unless-stopped

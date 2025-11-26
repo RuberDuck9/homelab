@@ -1,0 +1,29 @@
+services:
+
+  freshrss:
+    image: freshrss/freshrss:latest
+    container_name: freshrss
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: 10m
+    volumes:
+      # Recommended volume for FreshRSS persistent data such as configuration and SQLite databases
+      - /mnt/navidrome/data:/var/www/FreshRSS/data
+      # Optional volume for storing third-party extensions
+      - /mnt/navidrome/extensions:/var/www/FreshRSS/extensions
+    ports:
+      # If you want to open a port 8080 on the local machine:
+      - "80:80"
+    environment:
+      # A timezone http://php.net/timezones (default is UTC)
+      TZ: America/New_York
+      # Cron job to refresh feeds at specified minutes
+      CRON_MIN: '2,32'
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped

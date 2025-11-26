@@ -1,0 +1,26 @@
+services:
+
+  drawio:
+    image: jgraph/drawio:latest
+    container_name: drawio
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+      - 8443:8443
+    environment:
+      CITY: 
+      STATE: 
+      COUNTRY_CODE: United-States
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://domain:8080 || exit 1"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
